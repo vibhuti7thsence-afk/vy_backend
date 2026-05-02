@@ -33,22 +33,14 @@ $healingFormController = new HealingFormController();
 $yogaFormController = new YogaFormController();
 $adminController = new AdminDashboardController();
 
-$router->get('/', static function (): void {
-    Response::json([
-        'service' => 'yoga-api',
-        'health' => '/api/health',
-        'docs' => '/api/docs',
-    ]);
-});
-
-$router->get('/api/health', static function (): void {
+$healthHandler = static function (): void {
     Response::json([
         'status' => 'ok',
         'message' => 'Backend is running.',
     ]);
-});
+};
 
-$router->get('/api/docs', static function (): void {
+$docsHandler = static function (): void {
     header('Content-Type: text/html; charset=utf-8');
     try {
         $spec = require __DIR__ . '/../config/openapi.php';
@@ -74,7 +66,20 @@ $router->get('/api/docs', static function (): void {
             . '</pre></body></html>';
     }
     exit;
+};
+
+$router->get('/', static function (): void {
+    Response::json([
+        'service' => 'yoga-api',
+        'health' => '/health',
+        'docs' => '/docs',
+    ]);
 });
+
+$router->get('/health', $healthHandler);
+$router->get('/api/health', $healthHandler);
+$router->get('/docs', $docsHandler);
+$router->get('/api/docs', $docsHandler);
 
 $router->get('/api/openapi.json', static function (): void {
     $spec = require __DIR__ . '/../config/openapi.php';

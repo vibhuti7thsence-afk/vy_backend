@@ -122,7 +122,7 @@ $paths['/api/classes/registration-verify'] = [
     'get' => [
         'summary' => 'Verify class registration eligibility before payment',
         'operationId' => 'verifyRegistration',
-        'description' => 'Checks whether this mobile and Aadhaar can register for the given class: new user, same person continuing payment, fee already complete, or conflict (mobile or Aadhaar already used for this class by another identity).',
+        'description' => 'Checks whether this Aadhaar can register for the given class: new user, same person continuing payment, fee already complete, or Aadhaar conflict (same Aadhaar already used for this class with a different mobile). Mobile numbers can be shared by different Aadhaar holders.',
         'parameters' => [
             ['name' => 'mobile', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => 'Mobile number (10–15 digits)'],
             ['name' => 'aadhaar_number', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => '12-digit Aadhaar number'],

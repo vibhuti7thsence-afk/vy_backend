@@ -168,40 +168,28 @@ final class ClassRegistrationService
         }
 
         $pairs = $this->paymentRepository->distinctIdentitiesForClassByMobileOrAadhaar($classId, $mobile, $aadhaarNumber);
-        if ($pairs === []) {
+        $aadhaarExistsForClass = false;
+        foreach ($pairs as $p) {
+            if ($p['aadhaar_number'] === $aadhaarNumber) {
+                $aadhaarExistsForClass = true;
+                break;
+            }
+        }
+
+        if (!$aadhaarExistsForClass) {
             return [
                 'status' => 'new',
                 'can_submit_registration_payment' => true,
                 'message' => null,
             ];
         }
-
-        $samePair = false;
         foreach ($pairs as $p) {
-            if ($p['mobile'] === $mobile && $p['aadhaar_number'] === $aadhaarNumber) {
-                $samePair = true;
-                break;
-            }
-        }
-
-        if (!$samePair) {
-            foreach ($pairs as $p) {
-                if ($p['mobile'] === $mobile && $p['aadhaar_number'] !== $aadhaarNumber) {
-                    return [
-                        'status' => 'mobile_already_registered',
-                        'can_submit_registration_payment' => false,
-                        'message' => 'This mobile number is already registered for this class with a different Aadhaar number.',
-                    ];
-                }
-            }
-            foreach ($pairs as $p) {
-                if ($p['aadhaar_number'] === $aadhaarNumber && $p['mobile'] !== $mobile) {
-                    return [
-                        'status' => 'aadhaar_already_registered',
-                        'can_submit_registration_payment' => false,
-                        'message' => 'This Aadhaar number is already registered for this class with a different mobile number.',
-                    ];
-                }
+            if ($p['aadhaar_number'] === $aadhaarNumber && $p['mobile'] !== $mobile) {
+                return [
+                    'status' => 'aadhaar_already_registered',
+                    'can_submit_registration_payment' => false,
+                    'message' => 'This Aadhaar number is already registered for this class with a different mobile number.',
+                ];
             }
         }
 
@@ -259,11 +247,6 @@ final class ClassRegistrationService
         foreach ($pairs as $p) {
             if ($p['mobile'] === $mobile && $p['aadhaar_number'] === $aadhaarNumber) {
                 return;
-            }
-        }
-        foreach ($pairs as $p) {
-            if ($p['mobile'] === $mobile && $p['aadhaar_number'] !== $aadhaarNumber) {
-                throw new HttpException('This mobile number is already registered for this class with a different Aadhaar number.', 409);
             }
         }
         foreach ($pairs as $p) {

@@ -49,6 +49,7 @@ final class ClassRegistrationService
         if ($aadhaarNumber === '') {
             throw new HttpException('Aadhaar number is required.', 422);
         }
+        $this->assertNoCrossIdentityConflictForClass($classId, (string) $payload['mobile'], $aadhaarNumber);
         $this->userFeeRepository->ensureAgreedFee($aadhaarNumber, $classId, (float) $class['total_fee']);
         $agreedFee = $this->userFeeRepository->getAgreedFee($aadhaarNumber, $classId)
             ?? (float) $class['total_fee'];
@@ -145,5 +146,130 @@ final class ClassRegistrationService
             'paid_so_far' => $alreadyPaid,
             'remaining_amount' => $remaining,
         ];
+    }
+
+    /**
+     * Pre-check before class registration payment: conflicts when mobile or Aadhaar is already tied to another identity for this class.
+     *
+     * @return array{
+     *   status: string,
+     *   can_submit_registration_payment: bool,
+     *   message: ?string,
+     *   agreed_fee?: float,
+     *   paid_so_far?: float,
+     *   remaining_amount?: float
+     * }
+     */
+    public function verifyRegistrationForClass(string $mobile, string $aadhaarNumber, int $classId): array
+    {
+        $class = $this->classRepository->findById($classId);
+        if ($class === null) {
+            throw new HttpException('Selected class is invalid.', 404);
+        }
+
+        $pairs = $this->paymentRepository->distinctIdentitiesForClassByMobileOrAadhaar($classId, $mobile, $aadhaarNumber);
+        if ($pairs === []) {
+            return [
+                'status' => 'new',
+                'can_submit_registration_payment' => true,
+                'message' => null,
+            ];
+        }
+
+        $samePair = false;
+        foreach ($pairs as $p) {
+            if ($p['mobile'] === $mobile && $p['aadhaar_number'] === $aadhaarNumber) {
+                $samePair = true;
+                break;
+            }
+        }
+
+        if (!$samePair) {
+            foreach ($pairs as $p) {
+                if ($p['mobile'] === $mobile && $p['aadhaar_number'] !== $aadhaarNumber) {
+                    return [
+                        'status' => 'mobile_already_registered',
+                        'can_submit_registration_payment' => false,
+                        'message' => 'This mobile number is already registered for this class with a different Aadhaar number.',
+                    ];
+                }
+            }
+            foreach ($pairs as $p) {
+                if ($p['aadhaar_number'] === $aadhaarNumber && $p['mobile'] !== $mobile) {
+                    return [
+                        'status' => 'aadhaar_already_registered',
+                        'can_submit_registration_payment' => false,
+                        'message' => 'This Aadhaar number is already registered for this class with a different mobile number.',
+                    ];
+                }
+            }
+        }
+
+        $this->userFeeRepository->ensureAgreedFee($aadhaarNumber, $classId, (float) $class['total_fee']);
+        $agreedFee = $this->userFeeRepository->getAgreedFee($aadhaarNumber, $classId)
+            ?? (float) $class['total_fee'];
+        $alreadyPaid = $this->paymentRepository->totalPaidByAadhaarAndClass($aadhaarNumber, $classId);
+        $remaining = max($agreedFee - $alreadyPaid, 0);
+
+        if ($remaining <= 0) {
+            return [
+                'status' => 'registration_fee_complete',
+                'can_submit_registration_payment' => false,
+                'message' => 'Already registered for this class; the fee is fully paid.',
+                'agreed_fee' => $agreedFee,
+                'paid_so_far' => $alreadyPaid,
+                'remaining_amount' => 0.0,
+            ];
+        }
+
+        return [
+            'status' => 'already_registered',
+            'can_submit_registration_payment' => true,
+            'message' => 'Already registered for this class. You can submit additional payments toward the remaining balance.',
+            'agreed_fee' => $agreedFee,
+            'paid_so_far' => $alreadyPaid,
+            'remaining_amount' => $remaining,
+        ];
+    }
+
+    /**
+     * @return array{found: bool, name: ?string, message: string}
+     */
+    public function lookupRegisteredUser(string $mobile, string $aadhaarNumber): array
+    {
+        $name = $this->paymentRepository->findLatestRegistrantNameByMobileAndAadhaar($mobile, $aadhaarNumber);
+        if ($name === null) {
+            return [
+                'found' => false,
+                'name' => null,
+                'message' => 'User not found.',
+            ];
+        }
+
+        return [
+            'found' => true,
+            'name' => $name,
+            'message' => 'User found.',
+        ];
+    }
+
+    private function assertNoCrossIdentityConflictForClass(int $classId, string $mobile, string $aadhaarNumber): void
+    {
+        $pairs = $this->paymentRepository->distinctIdentitiesForClassByMobileOrAadhaar($classId, $mobile, $aadhaarNumber);
+        foreach ($pairs as $p) {
+            if ($p['mobile'] === $mobile && $p['aadhaar_number'] === $aadhaarNumber) {
+                return;
+            }
+        }
+        foreach ($pairs as $p) {
+            if ($p['mobile'] === $mobile && $p['aadhaar_number'] !== $aadhaarNumber) {
+                throw new HttpException('This mobile number is already registered for this class with a different Aadhaar number.', 409);
+            }
+        }
+        foreach ($pairs as $p) {
+            if ($p['aadhaar_number'] === $aadhaarNumber && $p['mobile'] !== $mobile) {
+                throw new HttpException('This Aadhaar number is already registered for this class with a different mobile number.', 409);
+            }
+        }
     }
 }

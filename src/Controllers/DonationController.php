@@ -59,4 +59,20 @@ final class DonationController
             'data' => $this->service->listByMobileAndAadhaar($mobile, $aadhaarNumber),
         ]);
     }
+
+    public function verifyDonationEligibility(Request $request): void
+    {
+        $validated = Validator::validate($request->query, [
+            'mobile' => 'required|mobile',
+            'aadhaar_number' => 'required|aadhaar',
+        ]);
+
+        Response::json([
+            'success' => true,
+            'data' => $this->service->verifyDonationEligibility(
+                (string) $validated['mobile'],
+                (string) $validated['aadhaar_number']
+            ),
+        ]);
+    }
 }

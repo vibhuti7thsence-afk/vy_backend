@@ -16,6 +16,56 @@ final class ClassPaymentRepository
         $this->pdo = Database::connection();
     }
 
+    /**
+     * Distinct (mobile, aadhaar_number) pairs already used for this class where either identifier matches.
+     *
+     * @return list<array{mobile: string, aadhaar_number: string}>
+     */
+    public function distinctIdentitiesForClassByMobileOrAadhaar(int $classId, string $mobile, string $aadhaarNumber): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT DISTINCT mobile, aadhaar_number FROM class_payments
+             WHERE class_id = :class_id AND (mobile = :mobile OR aadhaar_number = :aadhaar_number)'
+        );
+        $stmt->execute([
+            'class_id' => $classId,
+            'mobile' => $mobile,
+            'aadhaar_number' => $aadhaarNumber,
+        ]);
+
+        return $stmt->fetchAll();
+    }
+
+    public function hasRegistrationWithMobileAndAadhaar(string $mobile, string $aadhaarNumber): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT 1 FROM class_payments WHERE mobile = :mobile AND aadhaar_number = :aadhaar_number LIMIT 1'
+        );
+        $stmt->execute([
+            'mobile' => $mobile,
+            'aadhaar_number' => $aadhaarNumber,
+        ]);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function findLatestRegistrantNameByMobileAndAadhaar(string $mobile, string $aadhaarNumber): ?string
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT name FROM class_payments
+             WHERE mobile = :mobile AND aadhaar_number = :aadhaar_number
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'mobile' => $mobile,
+            'aadhaar_number' => $aadhaarNumber,
+        ]);
+
+        $name = $stmt->fetchColumn();
+        return $name === false ? null : (string) $name;
+    }
+
     public function totalPaidByMobileAndClass(string $mobile, int $classId): float
     {
         $stmt = $this->pdo->prepare(

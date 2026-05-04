@@ -118,6 +118,43 @@ $paths['/api/classes/payment-summary'] = [
     ],
 ];
 
+$paths['/api/classes/registration-verify'] = [
+    'get' => [
+        'summary' => 'Verify class registration eligibility before payment',
+        'operationId' => 'verifyRegistration',
+        'description' => 'Checks whether this mobile and Aadhaar can register for the given class: new user, same person continuing payment, fee already complete, or conflict (mobile or Aadhaar already used for this class by another identity).',
+        'parameters' => [
+            ['name' => 'mobile', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => 'Mobile number (10–15 digits)'],
+            ['name' => 'aadhaar_number', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => '12-digit Aadhaar number'],
+            ['name' => 'class_id', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'integer'], 'description' => 'Class id from GET /api/classes'],
+        ],
+        'responses' => ['200' => ['description' => 'OK'], '404' => ['description' => 'Class not found'], '422' => ['description' => 'Missing or invalid query params']],
+    ],
+];
+
+$paths['/api/classes/lookup-user'] = [
+    'post' => [
+        'summary' => 'Lookup registered user by mobile and Aadhaar',
+        'operationId' => 'lookupRegisteredUser',
+        'requestBody' => [
+            'required' => true,
+            'content' => [
+                'application/json' => [
+                    'schema' => [
+                        'type' => 'object',
+                        'required' => ['mobile', 'aadhaar_number'],
+                        'properties' => [
+                            'mobile' => ['type' => 'string', 'description' => 'Mobile number (10-15 digits)'],
+                            'aadhaar_number' => ['type' => 'string', 'description' => '12-digit Aadhaar number'],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'responses' => ['200' => ['description' => 'User found or not found'], '422' => ['description' => 'Validation failed']],
+    ],
+];
+
 $paths['/api/donations'] = [
     'post' => [
         'summary' => 'Submit donation',
@@ -143,7 +180,7 @@ $paths['/api/donations'] = [
                 ],
             ],
         ],
-        'responses' => ['201' => ['description' => 'Created'], '422' => ['description' => 'Validation failed']],
+        'responses' => ['201' => ['description' => 'Created'], '422' => ['description' => 'Validation failed, or donor has no class registration for this mobile and Aadhaar']],
     ],
     'get' => [
         'summary' => 'Donation history by mobile and Aadhaar',
@@ -154,6 +191,19 @@ $paths['/api/donations'] = [
             ['name' => 'aadhaar_number', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => '12-digit Aadhaar number'],
         ],
         'responses' => ['200' => ['description' => 'OK'], '422' => ['description' => 'Missing or invalid mobile / aadhaar_number']],
+    ],
+];
+
+$paths['/api/donations/verify-eligibility'] = [
+    'get' => [
+        'summary' => 'Verify donor has completed class registration',
+        'operationId' => 'verifyDonationEligibility',
+        'description' => 'Donations require at least one class registration payment row with the same mobile and Aadhaar. Returns can_donate and a message when false.',
+        'parameters' => [
+            ['name' => 'mobile', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => 'Mobile number (10–15 digits)'],
+            ['name' => 'aadhaar_number', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string'], 'description' => '12-digit Aadhaar number'],
+        ],
+        'responses' => ['200' => ['description' => 'OK'], '422' => ['description' => 'Missing or invalid query params']],
     ],
 ];
 

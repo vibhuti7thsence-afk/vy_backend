@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\HttpException;
+use App\Repositories\ClassPaymentRepository;
 use App\Repositories\DonationRepository;
 
 final class DonationService
@@ -13,6 +14,7 @@ final class DonationService
 
     public function __construct(
         private readonly DonationRepository $donationRepository = new DonationRepository(),
+        private readonly ClassPaymentRepository $classPaymentRepository = new ClassPaymentRepository(),
         ?DonationFileUploadService $fileUpload = null
     ) {
         $this->fileUpload = $fileUpload ?? DonationFileUploadService::fromConfig();
@@ -27,6 +29,13 @@ final class DonationService
         $amount = (float) $payload['amount_paid'];
         if ($amount <= 0) {
             throw new HttpException('Donation amount must be greater than zero.', 422);
+        }
+
+        if (!$this->classPaymentRepository->hasRegistrationWithMobileAndAadhaar(
+            (string) $payload['mobile'],
+            (string) $payload['aadhaar_number']
+        )) {
+            throw new HttpException('Please complete class registration with this mobile and Aadhaar before donating.', 422);
         }
 
         $docPaths = $this->fileUpload->processDonationDocs($files);
@@ -59,5 +68,17 @@ final class DonationService
     public function listByMobileAndAadhaar(string $mobile, string $aadhaarNumber): array
     {
         return $this->donationRepository->listByMobileAndAadhaar($mobile, $aadhaarNumber);
+    }
+
+    /**
+     * @return array{can_donate: bool, message: ?string}
+     */
+    public function verifyDonationEligibility(string $mobile, string $aadhaarNumber): array
+    {
+        $ok = $this->classPaymentRepository->hasRegistrationWithMobileAndAadhaar($mobile, $aadhaarNumber);
+        return [
+            'can_donate' => $ok,
+            'message' => $ok ? null : 'Please complete class registration with this mobile and Aadhaar before donating.',
+        ];
     }
 }

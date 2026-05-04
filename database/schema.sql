@@ -16,7 +16,15 @@ CREATE TABLE IF NOT EXISTS class_payments (
     preferred_time TEXT NULL,
     location TEXT NULL,
     siblings_name TEXT NULL,
+    age_or_birth TEXT NULL,
+    qualification TEXT NULL,
+    father_name TEXT NULL,
+    father_phone TEXT NULL,
+    mother_name TEXT NULL,
+    mother_phone TEXT NULL,
     message TEXT NULL,
+    why_attend_course TEXT NULL,
+    additional_message TEXT NULL,
     amount_paid NUMERIC NOT NULL CHECK(amount_paid > 0),
     transaction_id TEXT NULL,
     transaction_msg TEXT NULL,
@@ -51,6 +59,9 @@ ON class_user_fees (aadhaar_number, class_id);
 CREATE TABLE IF NOT EXISTS donations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    email TEXT NULL,
+    place TEXT NULL,
+    donation_category TEXT NULL,
     mobile TEXT NOT NULL,
     aadhaar_number TEXT NOT NULL,
     amount_paid NUMERIC NOT NULL CHECK(amount_paid > 0),
@@ -59,6 +70,7 @@ CREATE TABLE IF NOT EXISTS donations (
     aadhaar_front_path TEXT NULL,
     aadhaar_back_path TEXT NULL,
     transaction_rep_path TEXT NULL,
+    individual_photo_path TEXT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -114,6 +126,7 @@ CREATE TABLE IF NOT EXISTS healing_form_submissions (
     aadhaar_number TEXT NOT NULL,
     aadhaar_front_path TEXT NOT NULL,
     aadhaar_back_path TEXT NOT NULL,
+    star_name TEXT NULL,
     issue_type TEXT NULL,
     issue_description TEXT NULL,
     current_picture_path TEXT NULL,

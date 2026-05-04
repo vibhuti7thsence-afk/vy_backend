@@ -22,11 +22,11 @@ final class HealingFormRepository
         $stmt = $this->pdo->prepare(
             'INSERT INTO healing_form_submissions (
                 full_name, date_of_birth, time_of_birth, place_of_birth, current_location, mobile, email, address,
-                aadhaar_number, aadhaar_front_path, aadhaar_back_path, issue_type, issue_description, current_picture_path,
+                aadhaar_number, aadhaar_front_path, aadhaar_back_path, star_name, issue_type, issue_description, current_picture_path,
                 declaration_accepted, amount_paid, transaction_id, transaction_receipt_path
             ) VALUES (
                 :full_name, :date_of_birth, :time_of_birth, :place_of_birth, :current_location, :mobile, :email, :address,
-                :aadhaar_number, :aadhaar_front_path, :aadhaar_back_path, :issue_type, :issue_description, :current_picture_path,
+                :aadhaar_number, :aadhaar_front_path, :aadhaar_back_path, :star_name, :issue_type, :issue_description, :current_picture_path,
                 :declaration_accepted, :amount_paid, :transaction_id, :transaction_receipt_path
             )'
         );
@@ -43,6 +43,7 @@ final class HealingFormRepository
             'aadhaar_number' => $data['aadhaar_number'],
             'aadhaar_front_path' => $data['aadhaar_front_path'],
             'aadhaar_back_path' => $data['aadhaar_back_path'],
+            'star_name' => $data['star_name'] ?? null,
             'issue_type' => $data['issue_type'] ?? null,
             'issue_description' => $data['issue_description'] ?? null,
             'current_picture_path' => $data['current_picture_path'] ?? null,
@@ -59,13 +60,30 @@ final class HealingFormRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, full_name, date_of_birth, time_of_birth, place_of_birth, current_location, mobile, email, address,
-                    aadhaar_number, aadhaar_front_path, aadhaar_back_path, issue_type, issue_description, current_picture_path,
+                    aadhaar_number, aadhaar_front_path, aadhaar_back_path, star_name, issue_type, issue_description, current_picture_path,
                     declaration_accepted, amount_paid, transaction_id, transaction_receipt_path, created_at
              FROM healing_form_submissions
              WHERE mobile = :mobile
              ORDER BY created_at DESC'
         );
         $stmt->execute(['mobile' => $mobile]);
+        return $stmt->fetchAll();
+    }
+
+    public function listByMobileAndAadhaar(string $mobile, string $aadhaarNumber): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, full_name, date_of_birth, time_of_birth, place_of_birth, current_location, mobile, email, address,
+                    aadhaar_number, aadhaar_front_path, aadhaar_back_path, star_name, issue_type, issue_description, current_picture_path,
+                    declaration_accepted, amount_paid, transaction_id, transaction_receipt_path, created_at
+             FROM healing_form_submissions
+             WHERE mobile = :mobile AND aadhaar_number = :aadhaar_number
+             ORDER BY created_at DESC'
+        );
+        $stmt->execute([
+            'mobile' => $mobile,
+            'aadhaar_number' => $aadhaarNumber,
+        ]);
         return $stmt->fetchAll();
     }
 
@@ -86,12 +104,13 @@ final class HealingFormRepository
         $where = ['1=1'];
         $bind = [];
         if ($search !== '') {
-            $where[] = '(full_name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR issue_description LIKE :search5)';
+            $where[] = '(full_name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR issue_description LIKE :search5 OR star_name LIKE :search6)';
             $bind['search'] = '%' . $search . '%';
             $bind['search2'] = '%' . $search . '%';
             $bind['search3'] = '%' . $search . '%';
             $bind['search4'] = '%' . $search . '%';
             $bind['search5'] = '%' . $search . '%';
+            $bind['search6'] = '%' . $search . '%';
         }
         if ($issueType !== '') {
             $where[] = 'issue_type = :issue_type';
@@ -107,7 +126,7 @@ final class HealingFormRepository
         }
 
         $sql = 'SELECT id, full_name, date_of_birth, time_of_birth, place_of_birth, current_location, mobile, email, address,
-                       aadhaar_number, issue_type, issue_description, declaration_accepted, amount_paid, transaction_id, created_at
+                       aadhaar_number, star_name, issue_type, issue_description, declaration_accepted, amount_paid, transaction_id, created_at
                 FROM healing_form_submissions
                 WHERE ' . implode(' AND ', $where) . '
                 ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
@@ -129,12 +148,13 @@ final class HealingFormRepository
         $where = ['1=1'];
         $bind = [];
         if ($search !== '') {
-            $where[] = '(full_name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR issue_description LIKE :search5)';
+            $where[] = '(full_name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR issue_description LIKE :search5 OR star_name LIKE :search6)';
             $bind['search'] = '%' . $search . '%';
             $bind['search2'] = '%' . $search . '%';
             $bind['search3'] = '%' . $search . '%';
             $bind['search4'] = '%' . $search . '%';
             $bind['search5'] = '%' . $search . '%';
+            $bind['search6'] = '%' . $search . '%';
         }
         if ($issueType !== '') {
             $where[] = 'issue_type = :issue_type';

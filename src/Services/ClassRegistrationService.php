@@ -67,10 +67,7 @@ final class ClassRegistrationService
         $remainingAfter = $remainingBefore - $amount;
         $status = $remainingAfter > 0 ? 'partial' : 'paid';
 
-        $docPaths = ['aadhaar_doc_path' => null, 'aadhaar_doc_back_path' => null, 'transaction_receipt_path' => null];
-        if (isset($files['aadhaar_doc'], $files['aadhaar_doc_back'], $files['transaction_receipt_image'])) {
-            $docPaths = $this->fileUpload->processRegistrationDocs($files);
-        }
+        $docPaths = $this->fileUpload->processRegistrationDocs($files);
 
         $paymentId = $this->paymentRepository->create([
             'mobile' => $payload['mobile'],
@@ -81,7 +78,15 @@ final class ClassRegistrationService
             'preferred_time' => $payload['preferred_time'] ?? null,
             'location' => $payload['location'] ?? null,
             'siblings_name' => $payload['siblings_name'] ?? null,
+            'age_or_birth' => $payload['age_or_birth'] ?? null,
+            'qualification' => $payload['qualification'] ?? null,
+            'father_name' => $payload['father_name'] ?? null,
+            'father_phone' => $payload['father_phone'] ?? null,
+            'mother_name' => $payload['mother_name'] ?? null,
+            'mother_phone' => $payload['mother_phone'] ?? null,
             'message' => $payload['message'] ?? null,
+            'why_attend_course' => $payload['why_attend_course'] ?? null,
+            'additional_message' => $payload['additional_message'] ?? null,
             'amount_paid' => $amount,
             'transaction_id' => $payload['transaction_id'] ?? null,
             'transaction_msg' => $payload['transaction_msg'] ?? null,
@@ -100,6 +105,9 @@ final class ClassRegistrationService
             'paid_till_now' => $alreadyPaid + $amount,
             'remaining_amount' => $remainingAfter,
             'payment_status' => $status,
+            'your_full_name' => $payload['name'],
+            'phone_number' => $payload['mobile'],
+            'fee_amount_paid' => $amount,
         ];
     }
 
@@ -111,6 +119,16 @@ final class ClassRegistrationService
         }
 
         return $rows;
+    }
+
+    /**
+     * List each class fee payment row separately (chronological order newest first).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listPaymentTransactionsByMobileAndAadhaar(string $mobile, string $aadhaarNumber, ?int $classId = null): array
+    {
+        return $this->paymentRepository->listTransactionsByMobileAndAadhaar($mobile, $aadhaarNumber, $classId);
     }
 
     public function summaryByMobileAndAadhaar(string $mobile, string $aadhaarNumber): array

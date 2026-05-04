@@ -19,26 +19,35 @@ final class HealingFormController
 
     public function submit(Request $request): void
     {
-        $validated = Validator::validate($request->body, [
+        $mergedBody = self::mergeHealingBody($request->body);
+        $validated = Validator::validate($mergedBody, [
             'full_name' => 'required',
             'date_of_birth' => 'required',
+            'time_of_birth' => 'required',
+            'place_of_birth' => 'required',
             'mobile' => 'required|mobile',
             'aadhaar_number' => 'required|aadhaar',
+            'address' => 'required',
+            'issue_type' => 'required',
+            'issue_description' => 'required',
             'amount_paid' => 'required|numeric',
+            'email' => 'email_optional',
         ]);
 
-        $validated['time_of_birth'] = $this->clean($request->body['time_of_birth'] ?? null);
-        $validated['place_of_birth'] = $this->clean($request->body['place_of_birth'] ?? null);
-        $validated['current_location'] = $this->clean($request->body['current_location'] ?? null);
-        $validated['email'] = $this->clean($request->body['email'] ?? null);
-        $validated['address'] = $this->clean($request->body['address'] ?? null);
-        $validated['issue_type'] = $this->clean($request->body['issue_type'] ?? null);
-        $validated['issue_description'] = $this->clean($request->body['issue_description'] ?? null);
-        $validated['transaction_id'] = $this->clean($request->body['transaction_id'] ?? null);
+        $validated['time_of_birth'] = $this->clean($mergedBody['time_of_birth'] ?? null);
+        $validated['place_of_birth'] = $this->clean($mergedBody['place_of_birth'] ?? null);
+        $validated['current_location'] = $this->clean($mergedBody['current_location'] ?? null);
+        $validated['email'] = $this->clean($mergedBody['email'] ?? null);
+        $validated['address'] = $this->clean($mergedBody['address'] ?? null);
+        $validated['issue_type'] = $this->clean($mergedBody['issue_type'] ?? null);
+        $validated['issue_description'] = $this->clean($mergedBody['issue_description'] ?? null);
+        $validated['transaction_id'] = $this->clean($mergedBody['transaction_id'] ?? null);
+        $validated['star_name'] = $this->clean($mergedBody['star_name'] ?? null);
 
-        $declared = strtolower((string) ($request->body['declaration_accepted'] ?? ''));
+        $declared = strtolower((string) ($mergedBody['declaration_accepted'] ?? ''));
         $validated['declaration_accepted'] = in_array($declared, ['1', 'true', 'yes', 'on'], true) ? 1 : 0;
-        if ($validated['declaration_accepted'] !== 1) {
+        $validated = Validator::validate($validated, ['declaration_accepted' => 'required']);
+        if ((int) $validated['declaration_accepted'] !== 1) {
             throw new HttpException('Declaration must be accepted.', 422);
         }
 
@@ -52,18 +61,74 @@ final class HealingFormController
 
     public function listByMobile(Request $request): void
     {
-        $mobile = trim((string) ($request->query['mobile'] ?? ''));
-        if ($mobile === '') {
-            throw new HttpException('Query param "mobile" is required.', 422);
-        }
-        if (!preg_match('/^[0-9]{10,15}$/', $mobile)) {
-            throw new HttpException('Query param "mobile" must be 10-15 digits.', 422);
-        }
+        $lookup = self::resolveLookupQuery($request->query);
+        $rows = $this->service->listByMobileAndAadhaar($lookup['mobile'], $lookup['aadhaar_number']);
 
         Response::json([
             'success' => true,
-            'data' => $this->service->listByMobile($mobile),
+            'data' => self::rowsWithAliases($rows),
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    private static function mergeHealingBody(array $body): array
+    {
+        $amountPaid = $body['amount_paid'] ?? null;
+        if ($amountPaid === null || $amountPaid === '') {
+            $amountPaid = $body['fee_amount_paid'] ?? null;
+        }
+
+        return array_merge($body, [
+            'full_name' => trim((string) ($body['full_name'] ?? $body['your_name'] ?? '')),
+            'mobile' => trim((string) ($body['mobile'] ?? $body['phone_number'] ?? $body['phone'] ?? '')),
+            'place_of_birth' => trim((string) ($body['place_of_birth'] ?? $body['place_of_birth_city'] ?? '')),
+            'star_name' => trim((string) ($body['star_name'] ?? $body['star'] ?? '')),
+            'issue_type' => trim((string) ($body['issue_type'] ?? $body['issues'] ?? $body['issue'] ?? '')),
+            'issue_description' => trim((string) ($body['issue_description'] ?? $body['problem_description'] ?? '')),
+            'amount_paid' => $amountPaid,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     * @return array{mobile: string, aadhaar_number: string}
+     */
+    private static function resolveLookupQuery(array $query): array
+    {
+        $mobile = trim((string) ($query['mobile'] ?? $query['phone_number'] ?? $query['phone'] ?? ''));
+        $aadhaar = trim((string) ($query['aadhaar_number'] ?? $query['aadhaar'] ?? ''));
+        $normalized = [
+            'mobile' => $mobile,
+            'aadhaar_number' => $aadhaar !== '' ? preg_replace('/\D/', '', $aadhaar) : '',
+        ];
+
+        return Validator::validate($normalized, [
+            'mobile' => 'required|mobile',
+            'aadhaar_number' => 'required|aadhaar',
+        ]);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function rowsWithAliases(array $rows): array
+    {
+        return array_map(static function (array $row): array {
+            return array_merge($row, [
+                'your_name' => $row['full_name'] ?? '',
+                'phone_number' => $row['mobile'] ?? '',
+                'star' => $row['star_name'] ?? null,
+                'issues' => $row['issue_type'] ?? null,
+                'problem_description' => $row['issue_description'] ?? null,
+                'fee_amount_paid' => isset($row['amount_paid']) ? (float) $row['amount_paid'] : null,
+                'fee_receipt_path' => $row['transaction_receipt_path'] ?? null,
+                'recent_picture_path' => $row['current_picture_path'] ?? null,
+            ]);
+        }, $rows);
     }
 
     private function clean(mixed $value): ?string

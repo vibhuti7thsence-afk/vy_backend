@@ -19,11 +19,14 @@ final class DonationRepository
     public function create(array $data): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO donations (name, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path)
-             VALUES (:name, :mobile, :aadhaar_number, :amount_paid, :transaction_id, :status, :aadhaar_front_path, :aadhaar_back_path, :transaction_rep_path)'
+            'INSERT INTO donations (name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, individual_photo_path)
+             VALUES (:name, :email, :place, :donation_category, :mobile, :aadhaar_number, :amount_paid, :transaction_id, :status, :aadhaar_front_path, :aadhaar_back_path, :transaction_rep_path, :individual_photo_path)'
         );
         $stmt->execute([
             'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'place' => $data['place'] ?? null,
+            'donation_category' => $data['donation_category'] ?? null,
             'mobile' => $data['mobile'],
             'aadhaar_number' => $data['aadhaar_number'],
             'amount_paid' => $data['amount_paid'],
@@ -32,6 +35,7 @@ final class DonationRepository
             'aadhaar_front_path' => $data['aadhaar_front_path'] ?? null,
             'aadhaar_back_path' => $data['aadhaar_back_path'] ?? null,
             'transaction_rep_path' => $data['transaction_rep_path'] ?? null,
+            'individual_photo_path' => $data['individual_photo_path'] ?? null,
         ]);
 
         return (int) $this->pdo->lastInsertId();
@@ -40,7 +44,7 @@ final class DonationRepository
     public function listByMobile(string $mobile): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, name, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, created_at
+            'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, individual_photo_path, created_at
              FROM donations WHERE mobile = :mobile ORDER BY id DESC'
         );
         $stmt->execute(['mobile' => $mobile]);
@@ -51,7 +55,7 @@ final class DonationRepository
     public function listByMobileAndAadhaar(string $mobile, string $aadhaarNumber): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, name, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, created_at
+            'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, individual_photo_path, created_at
              FROM donations WHERE mobile = :mobile AND aadhaar_number = :aadhaar_number ORDER BY id DESC'
         );
         $stmt->execute(['mobile' => $mobile, 'aadhaar_number' => $aadhaarNumber]);
@@ -62,7 +66,7 @@ final class DonationRepository
     public function findById(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, name, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, created_at
+            'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, aadhaar_front_path, aadhaar_back_path, transaction_rep_path, individual_photo_path, created_at
              FROM donations WHERE id = :id'
         );
         $stmt->execute(['id' => $id]);
@@ -87,11 +91,14 @@ final class DonationRepository
         $where = ['1=1'];
         $bind = [];
         if ($search !== '') {
-            $where[] = '(name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4)';
+            $where[] = '(name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR place LIKE :search5 OR donation_category LIKE :search6 OR email LIKE :search7)';
             $bind['search'] = '%' . $search . '%';
             $bind['search2'] = '%' . $search . '%';
             $bind['search3'] = '%' . $search . '%';
             $bind['search4'] = '%' . $search . '%';
+            $bind['search5'] = '%' . $search . '%';
+            $bind['search6'] = '%' . $search . '%';
+            $bind['search7'] = '%' . $search . '%';
         }
         if ($status !== '' && in_array($status, ['pending', 'verified', 'rejected'], true)) {
             $where[] = 'status = :status';
@@ -105,7 +112,7 @@ final class DonationRepository
             $where[] = 'created_at <= :end_date';
             $bind['end_date'] = $endDate . ' 23:59:59';
         }
-        $sql = 'SELECT id, name, mobile, aadhaar_number, amount_paid, transaction_id, status, created_at
+        $sql = 'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, created_at
                 FROM donations WHERE ' . implode(' AND ', $where) . ' ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($bind);
@@ -167,11 +174,14 @@ final class DonationRepository
         $where = ['1=1'];
         $bind = [];
         if ($search !== '') {
-            $where[] = '(name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4)';
+            $where[] = '(name LIKE :search OR mobile LIKE :search2 OR aadhaar_number LIKE :search3 OR transaction_id LIKE :search4 OR place LIKE :search5 OR donation_category LIKE :search6 OR email LIKE :search7)';
             $bind['search'] = '%' . $search . '%';
             $bind['search2'] = '%' . $search . '%';
             $bind['search3'] = '%' . $search . '%';
             $bind['search4'] = '%' . $search . '%';
+            $bind['search5'] = '%' . $search . '%';
+            $bind['search6'] = '%' . $search . '%';
+            $bind['search7'] = '%' . $search . '%';
         }
         if ($status !== '' && in_array($status, ['pending', 'verified', 'rejected'], true)) {
             $where[] = 'status = :status';

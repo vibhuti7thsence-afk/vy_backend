@@ -9,10 +9,17 @@ use RuntimeException;
 
 final class DonationFileUploadService
 {
-    private const UPLOAD_KEYS = [
-        'aadhaar_front_doc' => 'aadhaar_front_path',
-        'aadhaar_back_doc' => 'aadhaar_back_path',
-        'transaction_rep_doc' => 'transaction_rep_path',
+    /**
+     * Each storage key accepts the first present file from its form field aliases
+     * (verify-your-donation form names first, then legacy keys).
+     *
+     * @var array<string, list<string>>
+     */
+    private const UPLOAD_SLOTS = [
+        'aadhaar_front_path' => ['aadhaar_front', 'aadhaar_front_doc'],
+        'aadhaar_back_path' => ['aadhaar_back', 'aadhaar_back_doc'],
+        'transaction_rep_path' => ['receipt_photo', 'transaction_rep_doc'],
+        'individual_photo_path' => ['individual_photo'],
     ];
 
     public function __construct(
@@ -36,7 +43,7 @@ final class DonationFileUploadService
     /**
      * Validate and store donation docs. Returns array of path keys => relative path.
      * @param array<string, array{name: string, type: string, tmp_name: string, error: int, size: int}> $files
-     * @return array{aadhaar_front_path: string|null, aadhaar_back_path: string|null, transaction_rep_path: string|null}
+     * @return array{aadhaar_front_path: string|null, aadhaar_back_path: string|null, transaction_rep_path: string|null, individual_photo_path: string|null}
      */
     public function processDonationDocs(array $files): array
     {
@@ -49,36 +56,46 @@ final class DonationFileUploadService
             'aadhaar_front_path' => null,
             'aadhaar_back_path' => null,
             'transaction_rep_path' => null,
+            'individual_photo_path' => null,
         ];
 
-        foreach (self::UPLOAD_KEYS as $formKey => $pathKey) {
-            $file = $files[$formKey] ?? null;
-            if ($file === null || $file['error'] === UPLOAD_ERR_NO_FILE || $file['tmp_name'] === '') {
-                throw new HttpException('Missing required document: ' . $formKey, 422);
+        foreach (self::UPLOAD_SLOTS as $pathKey => $formKeys) {
+            $file = null;
+            $usedFormKey = '';
+            foreach ($formKeys as $formKey) {
+                $candidate = $files[$formKey] ?? null;
+                if ($candidate !== null && $candidate['error'] !== UPLOAD_ERR_NO_FILE && $candidate['tmp_name'] !== '') {
+                    $file = $candidate;
+                    $usedFormKey = $formKey;
+                    break;
+                }
+            }
+            if ($file === null) {
+                throw new HttpException('Missing required document (one of: ' . implode(', ', $formKeys) . ')', 422);
             }
             if ($file['error'] !== UPLOAD_ERR_OK) {
-                throw new HttpException('Upload failed for ' . $formKey . ': ' . $this->uploadErrorMessage($file['error']), 422);
+                throw new HttpException('Upload failed for ' . $usedFormKey . ': ' . $this->uploadErrorMessage($file['error']), 422);
             }
             if ($file['size'] > $this->maxSizeBytes) {
-                throw new HttpException('File too large for ' . $formKey . '. Max ' . round($this->maxSizeBytes / 1024 / 1024, 1) . ' MB.', 422);
+                throw new HttpException('File too large for ' . $usedFormKey . '. Max ' . round($this->maxSizeBytes / 1024 / 1024, 1) . ' MB.', 422);
             }
 
             $mime = $this->detectMime($file['tmp_name'], $file['type']);
             if (!in_array($mime, $this->allowedMimes, true)) {
-                throw new HttpException('Invalid file type for ' . $formKey . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
+                throw new HttpException('Invalid file type for ' . $usedFormKey . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
             }
 
             $ext = $this->mimeToExt($mime);
             $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $file['name']);
             $safeName = substr($safeName, 0, 100) ?: 'file';
-            $filename = date('Y-m-d_His') . '_' . $formKey . '_' . $safeName;
+            $filename = date('Y-m-d_His') . '_' . $usedFormKey . '_' . $safeName;
             if (strlen(pathinfo($filename, PATHINFO_EXTENSION)) < 2) {
                 $filename .= $ext;
             }
             $destPath = $baseDir . DIRECTORY_SEPARATOR . $filename;
 
             if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-                throw new RuntimeException('Failed to save uploaded file: ' . $formKey);
+                throw new RuntimeException('Failed to save uploaded file: ' . $usedFormKey);
             }
 
             $result[$pathKey] = 'donations/' . $filename;

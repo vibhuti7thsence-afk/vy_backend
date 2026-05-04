@@ -9,10 +9,15 @@ use RuntimeException;
 
 final class RegistrationFileUploadService
 {
-    private const UPLOAD_KEYS = [
-        'aadhaar_doc' => 'aadhaar_doc_path',
-        'aadhaar_doc_back' => 'aadhaar_doc_back_path',
-        'transaction_receipt_image' => 'transaction_receipt_path',
+    /**
+     * UI form names first, then legacy keys.
+     *
+     * @var array<string, list<string>>
+     */
+    private const UPLOAD_SLOTS = [
+        'aadhaar_doc_path' => ['aadhaar_front', 'aadhaar_card_front', 'aadhaar_doc'],
+        'aadhaar_doc_back_path' => ['aadhaar_back', 'aadhaar_card_back', 'aadhaar_doc_back'],
+        'transaction_receipt_path' => ['transaction_receipt', 'fee_receipt', 'transaction_receipt_image'],
     ];
 
     public function __construct(
@@ -51,34 +56,43 @@ final class RegistrationFileUploadService
             'transaction_receipt_path' => null,
         ];
 
-        foreach (self::UPLOAD_KEYS as $formKey => $pathKey) {
-            $file = $files[$formKey] ?? null;
-            if ($file === null || $file['error'] === UPLOAD_ERR_NO_FILE || $file['tmp_name'] === '') {
-                throw new HttpException('Missing required document: ' . $formKey, 422);
+        foreach (self::UPLOAD_SLOTS as $pathKey => $formKeys) {
+            $file = null;
+            $usedFormKey = '';
+            foreach ($formKeys as $formKey) {
+                $candidate = $files[$formKey] ?? null;
+                if ($candidate !== null && $candidate['error'] !== UPLOAD_ERR_NO_FILE && $candidate['tmp_name'] !== '') {
+                    $file = $candidate;
+                    $usedFormKey = $formKey;
+                    break;
+                }
+            }
+            if ($file === null) {
+                throw new HttpException('Missing required document (one of: ' . implode(', ', $formKeys) . ')', 422);
             }
             if ($file['error'] !== UPLOAD_ERR_OK) {
-                throw new HttpException('Upload failed for ' . $formKey . ': ' . $this->uploadErrorMessage($file['error']), 422);
+                throw new HttpException('Upload failed for ' . $usedFormKey . ': ' . $this->uploadErrorMessage($file['error']), 422);
             }
             if ($file['size'] > $this->maxSizeBytes) {
-                throw new HttpException('File too large for ' . $formKey . '. Max ' . round($this->maxSizeBytes / 1024 / 1024, 1) . ' MB.', 422);
+                throw new HttpException('File too large for ' . $usedFormKey . '. Max ' . round($this->maxSizeBytes / 1024 / 1024, 1) . ' MB.', 422);
             }
 
             $mime = $this->detectMime($file['tmp_name'], $file['type']);
             if (!in_array($mime, $this->allowedMimes, true)) {
-                throw new HttpException('Invalid file type for ' . $formKey . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
+                throw new HttpException('Invalid file type for ' . $usedFormKey . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
             }
 
             $ext = $this->mimeToExt($mime);
             $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $file['name']);
             $safeName = substr($safeName, 0, 100) ?: 'file';
-            $filename = date('Y-m-d_His') . '_' . $formKey . '_' . $safeName;
+            $filename = date('Y-m-d_His') . '_' . $usedFormKey . '_' . $safeName;
             if (strlen(pathinfo($filename, PATHINFO_EXTENSION)) < 2) {
                 $filename .= $ext;
             }
             $destPath = $baseDir . DIRECTORY_SEPARATOR . $filename;
 
             if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-                throw new RuntimeException('Failed to save uploaded file: ' . $formKey);
+                throw new RuntimeException('Failed to save uploaded file: ' . $usedFormKey);
             }
 
             $result[$pathKey] = 'registrations/' . $filename;

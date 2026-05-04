@@ -37,10 +37,10 @@ final class HealingFormService
             throw new HttpException('Amount paid must be greater than zero.', 422);
         }
 
-        $aadhaarFrontPath = $this->storeFile($files, 'aadhar_card_front', true);
-        $aadhaarBackPath = $this->storeFile($files, 'aadhar_card_back', true);
-        $receiptPath = $this->storeFile($files, 'transaction_receipt_image', true);
-        $currentPicturePath = $this->storeFile($files, 'current_picture', false);
+        $aadhaarFrontPath = $this->storeFileFromAliases($files, ['aadhaar_front', 'aadhar_card_front'], true);
+        $aadhaarBackPath = $this->storeFileFromAliases($files, ['aadhaar_back', 'aadhar_card_back'], true);
+        $receiptPath = $this->storeFileFromAliases($files, ['fee_receipt', 'transaction_receipt_image'], true);
+        $currentPicturePath = $this->storeFileFromAliases($files, ['recent_picture', 'current_picture'], true);
 
         $id = $this->repository->create([
             'full_name' => $payload['full_name'],
@@ -54,6 +54,7 @@ final class HealingFormService
             'aadhaar_number' => $payload['aadhaar_number'],
             'aadhaar_front_path' => $aadhaarFrontPath,
             'aadhaar_back_path' => $aadhaarBackPath,
+            'star_name' => $payload['star_name'] ?? null,
             'issue_type' => $payload['issue_type'] ?? null,
             'issue_description' => $payload['issue_description'] ?? null,
             'current_picture_path' => $currentPicturePath,
@@ -66,8 +67,12 @@ final class HealingFormService
         return [
             'id' => $id,
             'full_name' => $payload['full_name'],
+            'your_name' => $payload['full_name'],
             'mobile' => $payload['mobile'],
+            'phone_number' => $payload['mobile'],
+            'aadhaar_number' => $payload['aadhaar_number'],
             'amount_paid' => $amountPaid,
+            'fee_amount_paid' => $amountPaid,
         ];
     }
 
@@ -76,28 +81,43 @@ final class HealingFormService
         return $this->repository->listByMobile($mobile);
     }
 
+    public function listByMobileAndAadhaar(string $mobile, string $aadhaarNumber): array
+    {
+        return $this->repository->listByMobileAndAadhaar($mobile, $aadhaarNumber);
+    }
+
     /**
      * @param array<string, array{name: string, type: string, tmp_name: string, error: int, size: int}> $files
      */
-    private function storeFile(array $files, string $key, bool $required): ?string
+    private function storeFileFromAliases(array $files, array $keys, bool $required): ?string
     {
-        $file = $files[$key] ?? null;
+        $file = null;
+        $usedKey = null;
+        foreach ($keys as $key) {
+            $candidate = $files[$key] ?? null;
+            if ($candidate !== null && $candidate['error'] !== UPLOAD_ERR_NO_FILE && $candidate['tmp_name'] !== '') {
+                $file = $candidate;
+                $usedKey = $key;
+                break;
+            }
+        }
+
         if ($file === null || $file['error'] === UPLOAD_ERR_NO_FILE || $file['tmp_name'] === '') {
             if ($required) {
-                throw new HttpException('Missing required file: ' . $key, 422);
+                throw new HttpException('Missing required file (one of: ' . implode(', ', $keys) . ')', 422);
             }
             return null;
         }
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            throw new HttpException('Upload failed for ' . $key, 422);
+            throw new HttpException('Upload failed for ' . ($usedKey ?? $keys[0]), 422);
         }
         if ($file['size'] > $this->maxSizeBytes) {
-            throw new HttpException('File too large for ' . $key, 422);
+            throw new HttpException('File too large for ' . ($usedKey ?? $keys[0]), 422);
         }
 
         $mime = $this->detectMime($file['tmp_name'], $file['type']);
         if (!in_array($mime, $this->allowedMimes, true)) {
-            throw new HttpException('Invalid file type for ' . $key . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
+            throw new HttpException('Invalid file type for ' . ($usedKey ?? $keys[0]) . '. Allowed: JPEG, PNG, WebP, PDF.', 422);
         }
 
         if (!is_dir($this->baseDir) && !mkdir($concurrentDirectory = $this->baseDir, 0755, true) && !is_dir($concurrentDirectory)) {
@@ -107,13 +127,13 @@ final class HealingFormService
         $ext = $this->mimeToExt($mime);
         $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $file['name']);
         $safeName = substr($safeName, 0, 100) ?: 'file';
-        $filename = date('Y-m-d_His') . '_' . $key . '_' . $safeName;
+        $filename = date('Y-m-d_His') . '_' . ($usedKey ?? $keys[0]) . '_' . $safeName;
         if (strlen(pathinfo($filename, PATHINFO_EXTENSION)) < 2) {
             $filename .= $ext;
         }
         $destPath = $this->baseDir . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-            throw new RuntimeException('Failed to save uploaded file: ' . $key);
+            throw new RuntimeException('Failed to save uploaded file: ' . ($usedKey ?? $keys[0]));
         }
 
         return 'registrations/' . $filename;

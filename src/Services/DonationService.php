@@ -42,6 +42,9 @@ final class DonationService
 
         $id = $this->donationRepository->create([
             'name' => $payload['name'],
+            'email' => $payload['email'] ?? null,
+            'place' => $payload['place'] ?? null,
+            'donation_category' => $payload['donation_category'] ?? null,
             'mobile' => $payload['mobile'],
             'aadhaar_number' => (string) $payload['aadhaar_number'],
             'amount_paid' => $amount,
@@ -49,14 +52,20 @@ final class DonationService
             'aadhaar_front_path' => $docPaths['aadhaar_front_path'],
             'aadhaar_back_path' => $docPaths['aadhaar_back_path'],
             'transaction_rep_path' => $docPaths['transaction_rep_path'],
+            'individual_photo_path' => $docPaths['individual_photo_path'],
         ]);
 
         return [
             'donation_id' => $id,
+            'amount' => $amount,
             'amount_paid' => $amount,
+            'full_name' => $payload['name'],
+            'phone_number' => $payload['mobile'],
             'aadhaar_front_path' => $docPaths['aadhaar_front_path'],
             'aadhaar_back_path' => $docPaths['aadhaar_back_path'],
+            'receipt_photo_path' => $docPaths['transaction_rep_path'],
             'transaction_rep_path' => $docPaths['transaction_rep_path'],
+            'individual_photo_path' => $docPaths['individual_photo_path'],
         ];
     }
 

@@ -83,6 +83,12 @@ final class AdminDashboardService
                 'detail' => $r['class_name'] ?? '',
                 'status' => $r['payment_status'] === 'paid' ? 'completed' : ($r['payment_status'] === 'partial' ? 'partial' : 'pending'),
                 'created_at' => $r['created_at'],
+                'aadhaar_doc_path' => $r['aadhaar_doc_path'] ?? null,
+                'aadhaar_doc_back_path' => $r['aadhaar_doc_back_path'] ?? null,
+                'transaction_receipt_path' => $r['transaction_receipt_path'] ?? null,
+                'aadhaar_front_path' => $r['aadhaar_doc_path'] ?? null,
+                'aadhaar_back_path' => $r['aadhaar_doc_back_path'] ?? null,
+                'fee_receipt_path' => $r['transaction_receipt_path'] ?? null,
             ];
         }
         usort($activities, static fn ($a, $b) => strcmp($b['created_at'], $a['created_at']));
@@ -117,6 +123,12 @@ final class AdminDashboardService
                 'amount_remaining' => $remaining,
                 'payment_status' => $status,
                 'payment_percentage_complete' => $pct,
+                'aadhaar_doc_path' => $r['aadhaar_doc_path'] ?? null,
+                'aadhaar_doc_back_path' => $r['aadhaar_doc_back_path'] ?? null,
+                'transaction_receipt_path' => $r['transaction_receipt_path'] ?? null,
+                'aadhaar_front_path' => $r['aadhaar_doc_path'] ?? null,
+                'aadhaar_back_path' => $r['aadhaar_doc_back_path'] ?? null,
+                'fee_receipt_path' => $r['transaction_receipt_path'] ?? null,
             ];
         }
         return ['list' => $out, 'total' => $total];

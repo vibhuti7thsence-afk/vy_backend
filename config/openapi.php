@@ -150,7 +150,14 @@ $paths['/api/classes/register-payment'] = [
                 ],
             ],
         ],
-        'responses' => ['201' => ['description' => 'Created'], '404' => ['description' => 'Class not found'], '409' => ['description' => 'Already paid'], '422' => ['description' => 'Validation failed']],
+        'responses' => [
+            '201' => [
+                'description' => 'Created. Response `data` includes stored relative paths: `aadhaar_doc_path`, `aadhaar_doc_back_path`, `transaction_receipt_path` (aliases: `aadhaar_front_path`, `aadhaar_back_path`, `fee_receipt_path`).',
+            ],
+            '404' => ['description' => 'Class not found'],
+            '409' => ['description' => 'Already paid'],
+            '422' => ['description' => 'Validation failed'],
+        ],
     ],
 ];
 

@@ -90,6 +90,9 @@ final class ClassRegistrationController
         return array_map(static function (array $row): array {
             return array_merge($row, [
                 'phone_number' => (string) ($row['mobile'] ?? ''),
+                'aadhaar_front_path' => $row['aadhaar_doc_path'] ?? null,
+                'aadhaar_back_path' => $row['aadhaar_doc_back_path'] ?? null,
+                'fee_receipt_path' => $row['transaction_receipt_path'] ?? null,
             ]);
         }, $rows);
     }
@@ -110,6 +113,8 @@ final class ClassRegistrationController
                 'fee_amount_paid' => $amount,
                 'transaction_reference_id' => $row['transaction_id'] ?? null,
                 'fee_receipt_path' => $row['transaction_receipt_path'] ?? null,
+                'aadhaar_front_path' => $row['aadhaar_doc_path'] ?? null,
+                'aadhaar_back_path' => $row['aadhaar_doc_back_path'] ?? null,
             ]);
         }, $rows);
     }

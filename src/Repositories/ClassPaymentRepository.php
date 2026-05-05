@@ -138,7 +138,7 @@ final class ClassPaymentRepository
     {
         $sql = 'SELECT cp.id, cp.mobile, cp.aadhaar_number, cp.name, cp.email, cp.class_id, c.class_name,
                        cp.amount_paid, cp.transaction_id, cp.payment_status, cp.location, cp.created_at,
-                       cp.transaction_receipt_path
+                       cp.aadhaar_doc_path, cp.aadhaar_doc_back_path, cp.transaction_receipt_path
                 FROM class_payments cp
                 INNER JOIN classes c ON c.id = cp.class_id
                 WHERE cp.mobile = :mobile AND cp.aadhaar_number = :aadhaar_number';
@@ -168,7 +168,16 @@ final class ClassPaymentRepository
                 c.total_fee,
                 COALESCE(cuf.agreed_fee, c.total_fee) AS agreed_fee,
                 COALESCE(SUM(cp.amount_paid), 0) AS paid_amount,
-                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount
+                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount,
+                (SELECT cp2.aadhaar_doc_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_path,
+                (SELECT cp2.aadhaar_doc_back_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_back_path,
+                (SELECT cp2.transaction_receipt_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS transaction_receipt_path
              FROM class_payments cp
              JOIN classes c ON c.id = cp.class_id
              LEFT JOIN class_user_fees cuf ON cuf.aadhaar_number = cp.aadhaar_number AND cuf.class_id = cp.class_id
@@ -192,7 +201,16 @@ final class ClassPaymentRepository
                 c.total_fee,
                 COALESCE(cuf.agreed_fee, c.total_fee) AS agreed_fee,
                 COALESCE(SUM(cp.amount_paid), 0) AS paid_amount,
-                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount
+                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount,
+                (SELECT cp2.aadhaar_doc_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_path,
+                (SELECT cp2.aadhaar_doc_back_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_back_path,
+                (SELECT cp2.transaction_receipt_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS transaction_receipt_path
              FROM class_payments cp
              JOIN classes c ON c.id = cp.class_id
              LEFT JOIN class_user_fees cuf ON cuf.aadhaar_number = cp.aadhaar_number AND cuf.class_id = cp.class_id
@@ -354,7 +372,16 @@ final class ClassPaymentRepository
                 MAX(cp.location) AS location, MAX(cp.preferred_time) AS preferred_time,
                 c.class_name, COALESCE(cuf.agreed_fee, c.total_fee) AS agreed_fee,
                 COALESCE(SUM(cp.amount_paid), 0) AS paid_amount,
-                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount
+                (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount,
+                (SELECT cp2.aadhaar_doc_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_path,
+                (SELECT cp2.aadhaar_doc_back_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS aadhaar_doc_back_path,
+                (SELECT cp2.transaction_receipt_path FROM class_payments cp2
+                 WHERE cp2.aadhaar_number = cp.aadhaar_number AND cp2.class_id = cp.class_id
+                 ORDER BY cp2.id DESC LIMIT 1) AS transaction_receipt_path
                 FROM class_payments cp
                 JOIN classes c ON c.id = cp.class_id
                 LEFT JOIN class_user_fees cuf ON cuf.aadhaar_number = cp.aadhaar_number AND cuf.class_id = cp.class_id
@@ -436,7 +463,8 @@ final class ClassPaymentRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT cp.id, cp.name, cp.mobile, cp.aadhaar_number, cp.class_id, cp.amount_paid, cp.payment_status, cp.created_at,
-                    c.class_name
+                    c.class_name,
+                    cp.aadhaar_doc_path, cp.aadhaar_doc_back_path, cp.transaction_receipt_path
              FROM class_payments cp
              JOIN classes c ON c.id = cp.class_id
              ORDER BY cp.created_at DESC LIMIT ' . (int) $limit

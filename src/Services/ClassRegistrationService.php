@@ -108,6 +108,12 @@ final class ClassRegistrationService
             'your_full_name' => $payload['name'],
             'phone_number' => $payload['mobile'],
             'fee_amount_paid' => $amount,
+            'aadhaar_doc_path' => $docPaths['aadhaar_doc_path'],
+            'aadhaar_doc_back_path' => $docPaths['aadhaar_doc_back_path'],
+            'transaction_receipt_path' => $docPaths['transaction_receipt_path'],
+            'aadhaar_front_path' => $docPaths['aadhaar_doc_path'],
+            'aadhaar_back_path' => $docPaths['aadhaar_doc_back_path'],
+            'fee_receipt_path' => $docPaths['transaction_receipt_path'],
         ];
     }
 

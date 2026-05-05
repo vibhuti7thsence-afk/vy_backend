@@ -20,4 +20,15 @@ RUN mkdir -p storage/uploads/donations storage/uploads/registrations \
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT} -t public"]
+CMD ["sh", "-c", "\
+  set -e; \
+  mkdir -p public/storage; \
+  REG_DIR=\"${UPLOAD_REGISTRATIONS_DIR:-/app/storage/uploads/registrations}\"; \
+  DON_DIR=\"${UPLOAD_DONATIONS_DIR:-/app/storage/uploads/donations}\"; \
+  case \"$REG_DIR\" in /*) ;; *) REG_DIR=\"/app/$REG_DIR\" ;; esac; \
+  case \"$DON_DIR\" in /*) ;; *) DON_DIR=\"/app/$DON_DIR\" ;; esac; \
+  mkdir -p \"$REG_DIR\" \"$DON_DIR\" 2>/dev/null || true; \
+  rm -rf public/storage/registrations public/storage/donations; \
+  if [ -d \"$REG_DIR\" ]; then ln -s \"$REG_DIR\" public/storage/registrations; fi; \
+  if [ -d \"$DON_DIR\" ]; then ln -s \"$DON_DIR\" public/storage/donations; fi; \
+  php -S 0.0.0.0:${PORT} -t public"]

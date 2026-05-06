@@ -32,7 +32,7 @@ final class HealingFormController
             'issue_description' => 'required',
             'amount_paid' => 'required|numeric',
             'email' => 'email_optional',
-        ]);
+        ], true);
 
         $validated['time_of_birth'] = $this->clean($mergedBody['time_of_birth'] ?? null);
         $validated['place_of_birth'] = $this->clean($mergedBody['place_of_birth'] ?? null);

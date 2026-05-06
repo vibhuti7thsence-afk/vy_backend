@@ -28,7 +28,7 @@ final class YogaFormController
             'location' => 'required',
             'amount_paid' => 'required|numeric',
             'mobile' => 'required|mobile',
-        ]);
+        ], true);
 
         $optionalFields = [
             'year_of_learning',

@@ -145,7 +145,7 @@ final class ClassRegistrationController
             'mother_name' => 'required',
             'mother_phone' => 'required|mobile',
             'why_attend_course' => 'required',
-        ]);
+        ], true);
 
         $validated['additional_message'] = $mergedBody['additional_message'] ?? null;
 

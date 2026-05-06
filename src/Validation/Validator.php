@@ -12,7 +12,7 @@ final class Validator
      * @param array<string, mixed> $payload
      * @param array<string, string> $rules
      */
-    public static function validate(array $payload, array $rules): array
+    public static function validate(array $payload, array $rules, bool $allowMissingRequired = false): array
     {
         $errors = [];
         $clean = [];
@@ -22,7 +22,7 @@ final class Validator
             $value = $payload[$field] ?? null;
 
             foreach ($rulesArray as $rule) {
-                if ($rule === 'required' && ($value === null || $value === '')) {
+                if ($rule === 'required' && $allowMissingRequired === false && ($value === null || $value === '')) {
                     $errors[$field][] = 'This field is required.';
                 }
 
@@ -30,7 +30,7 @@ final class Validator
                     $errors[$field][] = 'Must be numeric.';
                 }
 
-                if ($rule === 'mobile' && $value !== null && !preg_match('/^[0-9]{10,15}$/', (string) $value)) {
+                if ($rule === 'mobile' && $value !== null && $value !== '' && !preg_match('/^[0-9]{10,15}$/', (string) $value)) {
                     $errors[$field][] = 'Mobile number must be 10-15 digits.';
                 }
 

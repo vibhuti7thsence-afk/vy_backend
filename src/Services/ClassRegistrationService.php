@@ -141,8 +141,16 @@ final class ClassRegistrationService
     {
         $rows = $this->paymentRepository->summaryByMobileAndAadhaar($mobile, $aadhaarNumber);
         foreach ($rows as &$row) {
-            $row['payment_status'] = ((float) $row['remaining_amount'] <= 0) ? 'paid' : 'partial_or_unpaid';
-            $row['pending_amount'] = max((float) $row['remaining_amount'], 0);
+            $paidAmount = (float) $row['paid_amount'];
+            $remaining = (float) $row['remaining_amount'];
+            if ($remaining <= 0) {
+                $row['payment_status'] = 'completed';
+            } elseif ($paidAmount > 0) {
+                $row['payment_status'] = 'partial';
+            } else {
+                $row['payment_status'] = 'pending';
+            }
+            $row['pending_amount'] = max($remaining, 0);
         }
 
         return $rows;

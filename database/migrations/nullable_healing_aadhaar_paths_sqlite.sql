@@ -1,4 +1,7 @@
-CREATE TABLE IF NOT EXISTS healing_form_submissions (
+-- SQLite does not support ALTER COLUMN; recreate the table with nullable aadhaar paths.
+PRAGMA foreign_keys = OFF;
+
+CREATE TABLE healing_form_submissions_new (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name TEXT NOT NULL,
     date_of_birth TEXT NOT NULL,
@@ -11,6 +14,7 @@ CREATE TABLE IF NOT EXISTS healing_form_submissions (
     aadhaar_number TEXT NOT NULL,
     aadhaar_front_path TEXT NULL,
     aadhaar_back_path TEXT NULL,
+    star_name TEXT NULL,
     issue_type TEXT NULL,
     issue_description TEXT NULL,
     current_picture_path TEXT NULL,
@@ -21,5 +25,12 @@ CREATE TABLE IF NOT EXISTS healing_form_submissions (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO healing_form_submissions_new SELECT * FROM healing_form_submissions;
+
+DROP TABLE healing_form_submissions;
+ALTER TABLE healing_form_submissions_new RENAME TO healing_form_submissions;
+
 CREATE INDEX IF NOT EXISTS idx_healing_form_submissions_mobile
 ON healing_form_submissions (mobile);
+
+PRAGMA foreign_keys = ON;

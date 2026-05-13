@@ -68,7 +68,11 @@ final class RegistrationFileUploadService
                 }
             }
             if ($file === null) {
-                throw new HttpException('Missing required document (one of: ' . implode(', ', $formKeys) . ')', 422);
+                // Only the payment receipt is strictly required; Aadhaar docs are optional for returning users.
+                if ($pathKey === 'transaction_receipt_path') {
+                    throw new HttpException('Missing required document (one of: ' . implode(', ', $formKeys) . ')', 422);
+                }
+                continue;
             }
             if ($file['error'] !== UPLOAD_ERR_OK) {
                 throw new HttpException('Upload failed for ' . $usedFormKey . ': ' . $this->uploadErrorMessage($file['error']), 422);

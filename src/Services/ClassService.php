@@ -42,6 +42,8 @@ final class ClassService
     /** @param array{id: mixed, class_name?: string, total_fee?: mixed, is_active?: mixed} $payload */
     public function updateClass(array $payload): array
     {
+        error_log('[ClassService::updateClass] raw payload: ' . json_encode($payload));
+
         $id = (int) ($payload['id'] ?? 0);
         if ($id <= 0) {
             throw new HttpException('id is required and must be a positive integer.', 422);
@@ -51,6 +53,8 @@ final class ClassService
         if ($existing === null) {
             throw new HttpException('Class not found.', 404);
         }
+
+        error_log('[ClassService::updateClass] existing class before update: ' . json_encode($existing));
 
         $data = [];
 
@@ -71,16 +75,30 @@ final class ClassService
         }
 
         if (array_key_exists('is_active', $payload) && $payload['is_active'] !== null) {
-            $data['is_active'] = (bool) $payload['is_active'];
+            $rawIsActive = $payload['is_active'];
+            $data['is_active'] = (bool) $rawIsActive;
+            error_log(sprintf(
+                '[ClassService::updateClass] is_active in payload — raw value: %s, type: %s, cast to bool: %s',
+                json_encode($rawIsActive),
+                gettype($rawIsActive),
+                $data['is_active'] ? 'true' : 'false'
+            ));
+        } else {
+            error_log('[ClassService::updateClass] is_active not in payload or null — keeping existing value: '
+                . ($existing['is_active'] ? 'true' : 'false'));
         }
 
         if ($data === []) {
             throw new HttpException('Provide at least one of: class_name, total_fee, is_active.', 422);
         }
 
+        error_log('[ClassService::updateClass] fields being written to DB: ' . json_encode($data));
+
         $this->classRepository->update($id, $data);
 
         $updated = $this->classRepository->findByIdAny($id);
+
+        error_log('[ClassService::updateClass] class after update: ' . json_encode($updated));
 
         return [
             'id' => $id,

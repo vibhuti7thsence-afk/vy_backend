@@ -70,7 +70,7 @@ final class ClassService
             $data['total_fee'] = $fee;
         }
 
-        if (array_key_exists('is_active', $payload)) {
+        if (array_key_exists('is_active', $payload) && $payload['is_active'] !== null) {
             $data['is_active'] = (bool) $payload['is_active'];
         }
 

@@ -39,7 +39,7 @@ $paths['/api/classes'] = [
     'put' => [
         'summary' => 'Update class',
         'operationId' => 'updateClass',
-        'requestBody' => ['required' => true, 'content' => ['application/json' => ['schema' => ['type' => 'object', 'required' => ['id'], 'properties' => ['id' => ['type' => 'integer'], 'class_name' => ['type' => 'string'], 'total_fee' => ['type' => 'number'], 'is_active' => ['type' => 'boolean']]]]]],
+        'requestBody' => ['required' => true, 'content' => ['application/json' => ['schema' => ['type' => 'object', 'required' => ['id'], 'properties' => ['id' => ['type' => 'integer'], 'class_name' => ['type' => 'string'], 'total_fee' => ['type' => 'number'], 'is_active' => ['type' => 'boolean', 'default' => true, 'description' => 'Set to false to deactivate (hide) the class. Omit to leave unchanged.']]]]]],
         'responses' => ['200' => ['description' => 'OK'], '404' => ['description' => 'Class not found'], '422' => ['description' => 'Validation failed']],
     ],
 ];

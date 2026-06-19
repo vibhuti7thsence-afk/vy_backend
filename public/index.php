@@ -14,6 +14,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../src/bootstrap.php';
 
+// Storage proxy: fetch private S3 objects and stream them to the client.
+// Handles both /storage/registrations/file.png and /storage/donations/file.png
+$_reqPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
+if (str_starts_with($_reqPath, '/storage/')) {
+    $s3Key = ltrim($_reqPath, '/storage/');  // e.g. "registrations/filename.png"
+    // Only allow registrations/ and donations/ prefixes
+    if (preg_match('#^(registrations|donations)/[^/]+$#', $s3Key)) {
+        $s3 = \App\Services\S3StorageService::fromConfig();
+        if ($s3 !== null) {
+            try {
+                $body = $s3->get($s3Key);
+                $ext  = strtolower(pathinfo($s3Key, PATHINFO_EXTENSION));
+                $mime = match ($ext) {
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'png'         => 'image/png',
+                    'webp'        => 'image/webp',
+                    'pdf'         => 'application/pdf',
+                    default       => 'application/octet-stream',
+                };
+                header('Content-Type: ' . $mime);
+                header('Content-Length: ' . strlen($body));
+                header('Cache-Control: private, max-age=86400');
+                echo $body;
+                exit;
+            } catch (\Throwable $e) {
+                http_response_code(404);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'File not found']);
+                exit;
+            }
+        }
+        // Fall through to local filesystem (non-S3 setup)
+    }
+}
+
 use App\Controllers\AdminDashboardController;
 use App\Controllers\ClassController;
 use App\Controllers\ClassRegistrationController;

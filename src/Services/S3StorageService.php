@@ -73,6 +73,65 @@ final class S3StorageService
     }
 
     /**
+     * Fetch an object from S3. Returns raw bytes.
+     */
+    public function get(string $key): string
+    {
+        $host        = $this->bucketHost();
+        $uri         = '/' . ltrim($key, '/');
+        $datetime    = gmdate('Ymd\THis\Z');
+        $date        = gmdate('Ymd');
+        $payloadHash = hash('sha256', '');
+
+        $canonicalHeaders =
+            'host:' . $host . "\n" .
+            'x-amz-content-sha256:' . $payloadHash . "\n" .
+            'x-amz-date:' . $datetime . "\n";
+        $signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+
+        $canonicalRequest = implode("\n", ['GET', $uri, '', $canonicalHeaders, $signedHeaders, $payloadHash]);
+        $credentialScope  = $date . '/' . $this->region . '/s3/aws4_request';
+        $stringToSign     = implode("\n", ['AWS4-HMAC-SHA256', $datetime, $credentialScope, hash('sha256', $canonicalRequest)]);
+
+        $kDate      = hash_hmac('sha256', $date, 'AWS4' . $this->secretKey, true);
+        $kRegion    = hash_hmac('sha256', $this->region, $kDate, true);
+        $kService   = hash_hmac('sha256', 's3', $kRegion, true);
+        $signingKey = hash_hmac('sha256', 'aws4_request', $kService, true);
+        $signature  = hash_hmac('sha256', $stringToSign, $signingKey);
+
+        $authorization = 'AWS4-HMAC-SHA256 Credential=' . $this->accessKey . '/' . $credentialScope
+            . ', SignedHeaders=' . $signedHeaders
+            . ', Signature=' . $signature;
+
+        $scheme  = ($this->endpoint !== '' && str_starts_with($this->endpoint, 'http://')) ? 'http' : 'https';
+        $url     = $scheme . '://' . $host . $uri;
+        $context = stream_context_create([
+            'http' => [
+                'method'        => 'GET',
+                'header'        => implode("\r\n", [
+                    'x-amz-content-sha256: ' . $payloadHash,
+                    'x-amz-date: ' . $datetime,
+                    'Authorization: ' . $authorization,
+                ]),
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $body       = @file_get_contents($url, false, $context);
+        $statusCode = 0;
+        foreach ($http_response_header ?? [] as $h) {
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) {
+                $statusCode = (int) $m[1];
+            }
+        }
+        if ($statusCode !== 200 || $body === false) {
+            throw new RuntimeException('S3 GET failed (HTTP ' . $statusCode . ') for key: ' . $key);
+        }
+
+        return $body;
+    }
+
+    /**
      * Upload a local file to S3. Returns the public URL.
      */
     public function upload(string $localPath, string $key, string $mimeType): string

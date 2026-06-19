@@ -21,3 +21,10 @@ spl_autoload_register(static function (string $class): void {
 date_default_timezone_set('Asia/Kolkata');
 
 \App\Core\Database::bootstrap();
+
+// Ensure Railway Bucket allows public read so uploaded docs are viewable in the app.
+$_s3 = \App\Services\S3StorageService::fromConfig();
+if ($_s3 !== null) {
+    $_s3->ensurePublicReadPolicy();
+}
+unset($_s3);

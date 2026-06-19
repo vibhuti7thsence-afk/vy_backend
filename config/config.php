@@ -14,8 +14,8 @@ return [
         'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
     ],
     'db' => [
-        // Auto-detect pgsql from DATABASE_URL (Railway Postgres); explicit DB_DRIVER overrides.
-        'driver' => strtolower((string) (getenv('DB_DRIVER') ?: (getenv('DATABASE_URL') ? 'pgsql' : 'sqlite'))),
+        // Auto-detect pgsql from Railway env vars; explicit DB_DRIVER overrides.
+        'driver' => strtolower((string) (getenv('DB_DRIVER') ?: ((getenv('DATABASE_URL') || getenv('PGHOST')) ? 'pgsql' : 'sqlite'))),
         'database' => (string) (getenv('DB_DATABASE') ?: (__DIR__ . '/../storage/app.db')),
         'host' => (string) (getenv('DB_HOST') ?: 'localhost'),
         'port' => (int) (getenv('DB_PORT') ?: 5432),

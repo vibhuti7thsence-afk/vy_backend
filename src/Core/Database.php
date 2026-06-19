@@ -106,26 +106,31 @@ final class Database
 
     private static function connectPostgres(): PDO
     {
-        // Prefer DATABASE_URL (Railway injects this automatically for Postgres services).
-        $databaseUrl = (string) (getenv('DATABASE_URL') ?: '');
+        // Railway sets individual PG* vars alongside DATABASE_URL — use them directly
+        // to avoid parse_url failures on passwords with special characters.
+        $host = (string) (getenv('PGHOST') ?: getenv('DB_HOST') ?: self::$config['host'] ?? 'localhost');
+        $port = (int) (getenv('PGPORT') ?: getenv('DB_PORT') ?: self::$config['port'] ?? 5432);
+        $database = (string) (getenv('PGDATABASE') ?: getenv('DB_DATABASE') ?: self::$config['database'] ?? '');
+        $username = (string) (getenv('PGUSER') ?: getenv('DB_USERNAME') ?: self::$config['username'] ?? '');
+        $password = (string) (getenv('PGPASSWORD') ?: getenv('DB_PASSWORD') ?: self::$config['password'] ?? '');
 
-        if ($databaseUrl !== '') {
-            $p = parse_url($databaseUrl);
-            $host = (string) ($p['host'] ?? 'localhost');
-            $port = (int) ($p['port'] ?? 5432);
-            $database = ltrim((string) ($p['path'] ?? ''), '/');
-            $username = (string) ($p['user'] ?? '');
-            $password = (string) ($p['pass'] ?? '');
-        } else {
-            $host = (string) (self::$config['host'] ?? 'localhost');
-            $port = (int) (self::$config['port'] ?? 5432);
-            $database = (string) (self::$config['database'] ?? '');
-            $username = (string) (self::$config['username'] ?? '');
-            $password = (string) (self::$config['password'] ?? '');
+        // Fall back to parsing DATABASE_URL only when individual vars are missing.
+        if ($database === '' || $username === '') {
+            $databaseUrl = (string) (getenv('DATABASE_URL') ?: '');
+            if ($databaseUrl !== '') {
+                $p = parse_url($databaseUrl);
+                if (is_array($p)) {
+                    $host = (string) ($p['host'] ?? $host);
+                    $port = (int) ($p['port'] ?? $port);
+                    $database = ltrim((string) ($p['path'] ?? ''), '/');
+                    $username = rawurldecode((string) ($p['user'] ?? ''));
+                    $password = rawurldecode((string) ($p['pass'] ?? ''));
+                }
+            }
         }
 
         if ($database === '' || $username === '') {
-            throw new RuntimeException('PostgreSQL database name and username are required (set DATABASE_URL or DB_* env vars).');
+            throw new RuntimeException('PostgreSQL database name and username are required (set PGDATABASE/PGUSER or DATABASE_URL).');
         }
 
         $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);

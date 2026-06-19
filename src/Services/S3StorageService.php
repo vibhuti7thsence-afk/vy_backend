@@ -28,8 +28,9 @@ final class S3StorageService
 
     public static function fromConfig(): ?self
     {
-        // Support both standard AWS env vars and Railway Bucket env vars.
-        $bucket = (string) (getenv('AWS_S3_BUCKET') ?: getenv('BUCKET_NAME') ?: '');
+        // Railway Bucket injects: AWS_S3_BUCKET_NAME, AWS_DEFAULT_REGION, AWS_ENDPOINT_URL,
+        // AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY. Fall back to generic names for other setups.
+        $bucket = (string) (getenv('AWS_S3_BUCKET_NAME') ?: getenv('AWS_S3_BUCKET') ?: getenv('BUCKET_NAME') ?: '');
         $accessKey = (string) (getenv('AWS_ACCESS_KEY_ID') ?: getenv('BUCKET_ACCESS_KEY_ID') ?: '');
         $secretKey = (string) (getenv('AWS_SECRET_ACCESS_KEY') ?: getenv('BUCKET_SECRET_ACCESS_KEY') ?: '');
 
@@ -37,8 +38,8 @@ final class S3StorageService
             return null;
         }
 
-        $region = (string) (getenv('AWS_REGION') ?: getenv('BUCKET_REGION') ?: 'auto');
-        $endpoint = rtrim((string) (getenv('AWS_S3_ENDPOINT') ?: getenv('BUCKET_ENDPOINT_URL') ?: ''), '/');
+        $region = (string) (getenv('AWS_DEFAULT_REGION') ?: getenv('AWS_REGION') ?: getenv('BUCKET_REGION') ?: 'auto');
+        $endpoint = rtrim((string) (getenv('AWS_ENDPOINT_URL') ?: getenv('AWS_S3_ENDPOINT') ?: getenv('BUCKET_ENDPOINT_URL') ?: ''), '/');
         $publicBaseUrl = rtrim((string) (getenv('S3_PUBLIC_BASE_URL') ?: getenv('BUCKET_PUBLIC_URL') ?: ''), '/');
 
         if ($publicBaseUrl === '') {

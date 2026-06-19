@@ -25,6 +25,6 @@ date_default_timezone_set('Asia/Kolkata');
 // Ensure Railway Bucket allows public read so uploaded docs are viewable in the app.
 $_s3 = \App\Services\S3StorageService::fromConfig();
 if ($_s3 !== null) {
-    $_s3->ensurePublicReadPolicy();
+    try { $_s3->ensurePublicReadPolicy(); } catch (\Throwable $e) { /* non-fatal */ }
 }
 unset($_s3);

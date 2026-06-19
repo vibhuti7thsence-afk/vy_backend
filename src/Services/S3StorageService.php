@@ -69,7 +69,7 @@ final class S3StorageService
             ]],
         ]);
 
-        $this->signedRequest('PUT', $host, '/', 'policy', 'application/json', $policy);
+        $this->signedRequest('PUT', $host, '/', 'policy=', 'application/json', $policy);
     }
 
     /**

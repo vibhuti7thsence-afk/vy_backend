@@ -106,23 +106,28 @@ final class Database
 
     private static function connectPostgres(): PDO
     {
-        $databaseUrl = (string) (getenv('DATABASE_URL') ?: '');
+        // Railway shares individual literal vars from Postgres service — use these first
+        // because DATABASE_URL contains ${{variable}} references that may not resolve correctly
+        // when read from a different service context.
+        $database = (string) (getenv('POSTGRES_DB') ?: getenv('DB_DATABASE') ?: self::$config['database'] ?? '');
+        $username = (string) (getenv('POSTGRES_USER') ?: getenv('DB_USERNAME') ?: self::$config['username'] ?? '');
+        $password = (string) (getenv('POSTGRES_PASSWORD') ?: getenv('DB_PASSWORD') ?: self::$config['password'] ?? '');
 
-        if ($databaseUrl !== '') {
-            // Pass the URI directly to libpq (PostgreSQL >= 9.2 understands postgresql:// URIs).
-            // This avoids PHP parse_url failures on passwords with special characters.
-            return new PDO('pgsql:' . $databaseUrl);
-        }
-
-        // Fallback for non-Railway setups using individual DB_* env vars.
+        // Derive host from DATABASE_URL (the domain portion resolves correctly via Railway).
         $host = (string) (getenv('DB_HOST') ?: self::$config['host'] ?? 'localhost');
         $port = (int) (getenv('DB_PORT') ?: self::$config['port'] ?? 5432);
-        $database = (string) (getenv('DB_DATABASE') ?: self::$config['database'] ?? '');
-        $username = (string) (getenv('DB_USERNAME') ?: self::$config['username'] ?? '');
-        $password = (string) (getenv('DB_PASSWORD') ?: self::$config['password'] ?? '');
+
+        $databaseUrl = (string) (getenv('DATABASE_URL') ?: '');
+        if ($databaseUrl !== '') {
+            $p = parse_url($databaseUrl);
+            if (is_array($p) && isset($p['host'])) {
+                $host = (string) $p['host'];
+                $port = (int) ($p['port'] ?? 5432);
+            }
+        }
 
         if ($database === '' || $username === '') {
-            throw new RuntimeException('PostgreSQL database name and username are required (set DATABASE_URL or DB_* env vars).');
+            throw new RuntimeException('PostgreSQL database name and username are required (set POSTGRES_DB/POSTGRES_USER or DB_* env vars).');
         }
 
         $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);

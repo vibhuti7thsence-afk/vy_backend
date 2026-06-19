@@ -18,7 +18,7 @@ require_once __DIR__ . '/../src/bootstrap.php';
 // Handles both /storage/registrations/file.png and /storage/donations/file.png
 $_reqPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
 if (str_starts_with($_reqPath, '/storage/')) {
-    $s3Key = ltrim($_reqPath, '/storage/');  // e.g. "registrations/filename.png"
+    $s3Key = substr($_reqPath, strlen('/storage/'));  // e.g. "registrations/filename.png"
     // Only allow registrations/ and donations/ prefixes
     if (preg_match('#^(registrations|donations)/[^/]+$#', $s3Key)) {
         $s3 = \App\Services\S3StorageService::fromConfig();

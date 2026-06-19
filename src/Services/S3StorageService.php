@@ -82,9 +82,10 @@ final class S3StorageService
         $canonicalHeaders =
             'content-type:' . $contentType . "\n" .
             'host:' . $host . "\n" .
+            'x-amz-acl:public-read' . "\n" .
             'x-amz-content-sha256:' . $payloadHash . "\n" .
             'x-amz-date:' . $datetime . "\n";
-        $signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+        $signedHeaders = 'content-type;host;x-amz-acl;x-amz-content-sha256;x-amz-date';
 
         $canonicalRequest = implode("\n", [
             'PUT',
@@ -122,6 +123,7 @@ final class S3StorageService
                 'header' => implode("\r\n", [
                     'Content-Type: ' . $contentType,
                     'Content-Length: ' . strlen($body),
+                    'x-amz-acl: public-read',
                     'x-amz-content-sha256: ' . $payloadHash,
                     'x-amz-date: ' . $datetime,
                     'Authorization: ' . $authorization,

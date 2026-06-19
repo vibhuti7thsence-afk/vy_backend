@@ -15,6 +15,24 @@ final class ClassController
     ) {
     }
 
+    public function listAllClasses(): void
+    {
+        Response::json([
+            'success' => true,
+            'data'    => $this->classService->listAllClasses(),
+        ]);
+    }
+
+    public function deleteClass(Request $request): void
+    {
+        $this->classService->deleteClass($request->body);
+
+        Response::json([
+            'success' => true,
+            'message' => 'Class deleted successfully.',
+        ]);
+    }
+
     public function createClass(Request $request): void
     {
         $result = $this->classService->createClass($request->body);

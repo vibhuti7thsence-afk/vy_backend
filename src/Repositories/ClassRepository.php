@@ -92,6 +92,21 @@ final class ClassRepository
         $stmt->execute($params);
     }
 
+    public function all(): array
+    {
+        $stmt = $this->pdo->query(
+            'SELECT id, class_name, total_fee, is_active, created_at FROM classes ORDER BY id ASC'
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    public function delete(int $id): void
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM classes WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
+
     public function countActive(): int
     {
         $stmt = $this->pdo->query('SELECT COUNT(*) AS c FROM classes WHERE is_active = 1');

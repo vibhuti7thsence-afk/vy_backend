@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -92,8 +92,10 @@ $router->get('/openapi.json', static function (): void {
 });
 
 $router->get('/api/classes', [$classController, 'listClasses']);
+$router->get('/api/admin/classes', [$classCrudController, 'listAllClasses']);
 $router->post('/api/classes', [$classCrudController, 'createClass']);
 $router->put('/api/classes', [$classCrudController, 'updateClass']);
+$router->delete('/api/admin/classes', [$classCrudController, 'deleteClass']);
 $router->put('/api/classes/agreed-fee', [$classController, 'putAgreedFee']);
 $router->post('/api/classes/register-payment', [$classController, 'registerPayment']);
 $router->get('/api/classes/payment-summary', [$classController, 'paymentSummary']);

@@ -39,6 +39,35 @@ final class ClassService
         ];
     }
 
+    public function listAllClasses(): array
+    {
+        return array_map(static function (array $row): array {
+            return [
+                'id'         => (int) $row['id'],
+                'class_name' => $row['class_name'],
+                'total_fee'  => (float) $row['total_fee'],
+                'is_active'  => (bool) $row['is_active'],
+                'created_at' => $row['created_at'],
+            ];
+        }, $this->classRepository->all());
+    }
+
+    /** @param array{id: mixed} $payload */
+    public function deleteClass(array $payload): void
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        if ($id <= 0) {
+            throw new HttpException('id is required and must be a positive integer.', 422);
+        }
+
+        $existing = $this->classRepository->findByIdAny($id);
+        if ($existing === null) {
+            throw new HttpException('Class not found.', 404);
+        }
+
+        $this->classRepository->delete($id);
+    }
+
     /** @param array{id: mixed, class_name?: string, total_fee?: mixed, is_active?: mixed} $payload */
     public function updateClass(array $payload): array
     {

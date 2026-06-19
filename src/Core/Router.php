@@ -26,6 +26,11 @@ final class Router
         $this->routes['PUT'][$path] = $handler;
     }
 
+    public function delete(string $path, callable $handler): void
+    {
+        $this->routes['DELETE'][$path] = $handler;
+    }
+
     public function dispatch(Request $request): void
     {
         $handler = $this->routes[$request->method][$request->path] ?? null;

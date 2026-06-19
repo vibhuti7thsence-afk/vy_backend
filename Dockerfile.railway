@@ -31,4 +31,4 @@ CMD ["sh", "-c", "\
   rm -rf public/storage/registrations public/storage/donations; \
   if [ -d \"$REG_DIR\" ]; then ln -s \"$REG_DIR\" public/storage/registrations; fi; \
   if [ -d \"$DON_DIR\" ]; then ln -s \"$DON_DIR\" public/storage/donations; fi; \
-  php -S 0.0.0.0:${PORT} -t public"]
+  php -S 0.0.0.0:${PORT} -t public public/router.php"]

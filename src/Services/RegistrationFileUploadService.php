@@ -23,7 +23,8 @@ final class RegistrationFileUploadService
     public function __construct(
         private readonly string $registrationsDir,
         private readonly int $maxSizeBytes,
-        private readonly array $allowedMimes
+        private readonly array $allowedMimes,
+        private readonly ?S3StorageService $s3 = null,
     ) {
     }
 
@@ -34,7 +35,8 @@ final class RegistrationFileUploadService
         return new self(
             (string) ($uploadConfig['registrations_dir'] ?? (__DIR__ . '/../../storage/uploads/registrations')),
             (int) ($uploadConfig['max_size_bytes'] ?? 5 * 1024 * 1024),
-            (array) ($uploadConfig['allowed_mimes'] ?? ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+            (array) ($uploadConfig['allowed_mimes'] ?? ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
+            S3StorageService::fromConfig(),
         );
     }
 
@@ -99,7 +101,13 @@ final class RegistrationFileUploadService
                 throw new RuntimeException('Failed to save uploaded file: ' . $usedFormKey);
             }
 
-            $result[$pathKey] = 'registrations/' . $filename;
+            if ($this->s3 !== null) {
+                $url = $this->s3->upload($destPath, 'registrations/' . $filename, $mime);
+                @unlink($destPath);
+                $result[$pathKey] = $url;
+            } else {
+                $result[$pathKey] = 'registrations/' . $filename;
+            }
         }
 
         return $result;

@@ -1,8 +1,8 @@
 FROM php:8.2-cli-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends default-libmysqlclient-dev \
-    && docker-php-ext-install pdo_mysql \
+    && apt-get install -y --no-install-recommends default-libmysqlclient-dev libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql \
     && { \
         echo "file_uploads=On"; \
         echo "upload_max_filesize=12M"; \

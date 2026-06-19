@@ -25,7 +25,8 @@ final class DonationFileUploadService
     public function __construct(
         private readonly string $donationsDir,
         private readonly int $maxSizeBytes,
-        private readonly array $allowedMimes
+        private readonly array $allowedMimes,
+        private readonly ?S3StorageService $s3 = null,
     ) {
     }
 
@@ -36,7 +37,8 @@ final class DonationFileUploadService
         return new self(
             (string) ($uploadConfig['donations_dir'] ?? (__DIR__ . '/../../storage/uploads/donations')),
             (int) ($uploadConfig['max_size_bytes'] ?? 5 * 1024 * 1024),
-            (array) ($uploadConfig['allowed_mimes'] ?? ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+            (array) ($uploadConfig['allowed_mimes'] ?? ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
+            S3StorageService::fromConfig(),
         );
     }
 
@@ -98,7 +100,13 @@ final class DonationFileUploadService
                 throw new RuntimeException('Failed to save uploaded file: ' . $usedFormKey);
             }
 
-            $result[$pathKey] = 'donations/' . $filename;
+            if ($this->s3 !== null) {
+                $url = $this->s3->upload($destPath, 'donations/' . $filename, $mime);
+                @unlink($destPath);
+                $result[$pathKey] = $url;
+            } else {
+                $result[$pathKey] = 'donations/' . $filename;
+            }
         }
 
         return $result;

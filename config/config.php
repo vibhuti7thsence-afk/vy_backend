@@ -14,11 +14,11 @@ return [
         'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
     ],
     'db' => [
-        // sqlite for local quick start, mysql for Hostinger production
-        'driver' => strtolower((string) (getenv('DB_DRIVER') ?: 'sqlite')),
+        // Auto-detect pgsql from DATABASE_URL (Railway Postgres); explicit DB_DRIVER overrides.
+        'driver' => strtolower((string) (getenv('DB_DRIVER') ?: (getenv('DATABASE_URL') ? 'pgsql' : 'sqlite'))),
         'database' => (string) (getenv('DB_DATABASE') ?: (__DIR__ . '/../storage/app.db')),
         'host' => (string) (getenv('DB_HOST') ?: 'localhost'),
-        'port' => (int) (getenv('DB_PORT') ?: 3306),
+        'port' => (int) (getenv('DB_PORT') ?: 5432),
         'username' => (string) (getenv('DB_USERNAME') ?: ''),
         'password' => (string) (getenv('DB_PASSWORD') ?: ''),
         'charset' => (string) (getenv('DB_CHARSET') ?: 'utf8mb4'),

@@ -14,6 +14,7 @@ final class HealingFormService
     private readonly int $maxSizeBytes;
     /** @var array<int, string> */
     private readonly array $allowedMimes;
+    private readonly ?S3StorageService $s3;
 
     public function __construct(
         private readonly HealingFormRepository $repository = new HealingFormRepository()
@@ -23,6 +24,7 @@ final class HealingFormService
         $this->baseDir = (string) ($uploadConfig['registrations_dir'] ?? (__DIR__ . '/../../storage/uploads/registrations'));
         $this->maxSizeBytes = (int) ($uploadConfig['max_size_bytes'] ?? 5 * 1024 * 1024);
         $this->allowedMimes = (array) ($uploadConfig['allowed_mimes'] ?? ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+        $this->s3 = S3StorageService::fromConfig();
     }
 
     /**
@@ -134,6 +136,12 @@ final class HealingFormService
         $destPath = $this->baseDir . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($file['tmp_name'], $destPath)) {
             throw new RuntimeException('Failed to save uploaded file: ' . ($usedKey ?? $keys[0]));
+        }
+
+        if ($this->s3 !== null) {
+            $url = $this->s3->upload($destPath, 'registrations/' . $filename, $mime);
+            @unlink($destPath);
+            return $url;
         }
 
         return 'registrations/' . $filename;

@@ -33,6 +33,7 @@ final class Database
         try {
             self::$pdo = match ($driver) {
                 'mysql' => self::connectMySql(),
+                'pgsql', 'postgres', 'postgresql' => self::connectPostgres(),
                 'sqlite' => self::connectSqlite(),
                 default => throw new RuntimeException('Unsupported DB driver: ' . $driver),
             };
@@ -48,9 +49,11 @@ final class Database
     private static function runMigrations(): void
     {
         $driver = strtolower((string) (self::$config['driver'] ?? 'sqlite'));
-        $sqlPath = $driver === 'mysql'
-            ? __DIR__ . '/../../database/schema_mysql.sql'
-            : __DIR__ . '/../../database/schema.sql';
+        $sqlPath = match (true) {
+            $driver === 'mysql' => __DIR__ . '/../../database/schema_mysql.sql',
+            in_array($driver, ['pgsql', 'postgres', 'postgresql'], true) => __DIR__ . '/../../database/schema_pgsql.sql',
+            default => __DIR__ . '/../../database/schema.sql',
+        };
 
         if (!is_file($sqlPath)) {
             throw new RuntimeException('Schema file not found.');
@@ -99,6 +102,34 @@ final class Database
         }
 
         return new PDO('sqlite:' . $databasePath);
+    }
+
+    private static function connectPostgres(): PDO
+    {
+        // Prefer DATABASE_URL (Railway injects this automatically for Postgres services).
+        $databaseUrl = (string) (getenv('DATABASE_URL') ?: '');
+
+        if ($databaseUrl !== '') {
+            $p = parse_url($databaseUrl);
+            $host = (string) ($p['host'] ?? 'localhost');
+            $port = (int) ($p['port'] ?? 5432);
+            $database = ltrim((string) ($p['path'] ?? ''), '/');
+            $username = (string) ($p['user'] ?? '');
+            $password = (string) ($p['pass'] ?? '');
+        } else {
+            $host = (string) (self::$config['host'] ?? 'localhost');
+            $port = (int) (self::$config['port'] ?? 5432);
+            $database = (string) (self::$config['database'] ?? '');
+            $username = (string) (self::$config['username'] ?? '');
+            $password = (string) (self::$config['password'] ?? '');
+        }
+
+        if ($database === '' || $username === '') {
+            throw new RuntimeException('PostgreSQL database name and username are required (set DATABASE_URL or DB_* env vars).');
+        }
+
+        $dsn = sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $database);
+        return new PDO($dsn, $username, $password);
     }
 
     private static function connectMySql(): PDO

@@ -368,8 +368,14 @@ final class ClassPaymentRepository
             $bind['search12'] = '%' . $search . '%';
             $bind['search13'] = '%' . $search . '%';
         }
-        $sql = "SELECT cp.aadhaar_number, cp.class_id, MAX(cp.name) AS name, MAX(cp.mobile) AS mobile,
-                MAX(cp.location) AS location, MAX(cp.preferred_time) AS preferred_time,
+        $sql = "SELECT cp.aadhaar_number, cp.class_id, MAX(cp.id) AS id, MAX(cp.name) AS name, MAX(cp.mobile) AS mobile,
+                MAX(cp.email) AS email, MAX(cp.location) AS location, MAX(cp.preferred_time) AS preferred_time,
+                MAX(cp.siblings_name) AS siblings_name, MAX(cp.age_or_birth) AS age_or_birth,
+                MAX(cp.qualification) AS qualification, MAX(cp.father_name) AS father_name,
+                MAX(cp.father_phone) AS father_phone, MAX(cp.mother_name) AS mother_name,
+                MAX(cp.mother_phone) AS mother_phone, MAX(cp.message) AS message,
+                MAX(cp.why_attend_course) AS why_attend_course, MAX(cp.additional_message) AS additional_message,
+                MAX(cp.created_at) AS created_at,
                 c.class_name, COALESCE(cuf.agreed_fee, c.total_fee) AS agreed_fee,
                 COALESCE(SUM(cp.amount_paid), 0) AS paid_amount,
                 (COALESCE(cuf.agreed_fee, c.total_fee) - COALESCE(SUM(cp.amount_paid), 0)) AS remaining_amount,

@@ -99,7 +99,7 @@ final class DonationController
             'place' => 'required',
             'donation_category' => 'required',
             'email' => 'email_optional',
-        ], true);
+        ]);
         $validated['transaction_id'] = isset($request->body['transaction_id']) ? trim((string) $request->body['transaction_id']) : null;
         if ($validated['transaction_id'] === '') {
             $validated['transaction_id'] = null;

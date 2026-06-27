@@ -46,7 +46,7 @@ final class HealingFormController
 
         $declared = strtolower((string) ($mergedBody['declaration_accepted'] ?? ''));
         $validated['declaration_accepted'] = in_array($declared, ['1', 'true', 'yes', 'on'], true) ? 1 : 0;
-        $validated = Validator::validate($validated, ['declaration_accepted' => 'required']);
+        Validator::validate($validated, ['declaration_accepted' => 'required']);
         if ((int) $validated['declaration_accepted'] !== 1) {
             throw new HttpException('Declaration must be accepted.', 422);
         }

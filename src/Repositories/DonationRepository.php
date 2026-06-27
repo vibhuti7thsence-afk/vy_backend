@@ -112,7 +112,8 @@ final class DonationRepository
             $where[] = 'created_at <= :end_date';
             $bind['end_date'] = $endDate . ' 23:59:59';
         }
-        $sql = 'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status, created_at
+        $sql = 'SELECT id, name, email, place, donation_category, mobile, aadhaar_number, amount_paid, transaction_id, status,
+                       aadhaar_front_path, aadhaar_back_path, transaction_rep_path, individual_photo_path, created_at
                 FROM donations WHERE ' . implode(' AND ', $where) . ' ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($bind);

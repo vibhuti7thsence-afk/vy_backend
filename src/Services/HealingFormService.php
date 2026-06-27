@@ -34,7 +34,7 @@ final class HealingFormService
      */
     public function submit(array $payload, array $files): array
     {
-        $amountPaid = (float) ($payload['amount_paid'] ?? 0);
+        $amountPaid = (float) ($payload['amount_paid'] ?? $payload['fee_amount_paid'] ?? 0);
         if ($amountPaid <= 0) {
             throw new HttpException('Amount paid must be greater than zero.', 422);
         }

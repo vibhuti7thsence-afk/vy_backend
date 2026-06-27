@@ -126,7 +126,8 @@ final class HealingFormRepository
         }
 
         $sql = 'SELECT id, full_name, date_of_birth, time_of_birth, place_of_birth, current_location, mobile, email, address,
-                       aadhaar_number, star_name, issue_type, issue_description, declaration_accepted, amount_paid, transaction_id, created_at
+                       aadhaar_number, aadhaar_front_path, aadhaar_back_path, current_picture_path,
+                       star_name, issue_type, issue_description, declaration_accepted, amount_paid, transaction_id, transaction_receipt_path, created_at
                 FROM healing_form_submissions
                 WHERE ' . implode(' AND ', $where) . '
                 ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset;
